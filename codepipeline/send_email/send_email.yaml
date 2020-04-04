@@ -7,16 +7,19 @@ Description: >
 
 Parameters:
   PipelineName:
+    Description: Codepipeline Name
     Type: String
-    Value: MyPipeline
+    Default: MyPipeline
 
   EmailRecipient1:
+    Description: String containing an email
     Type: String
-    Value: email1@mydomain.com
+    Default: email1@mydomain.com
 
   EmailRecipient2:
+    Description: String containing an email
     Type: String
-    Value: email2@mydomain.com
+    Default: email2@mydomain.com
 
 Resources:
   ## This is a generic Codepipeline execution state change listener
