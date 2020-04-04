@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  This stack configures your pipeline to send email to a list of recipients whenever
+  your stack failed.
+  Last Modified: 04/04/2020
+  Author: Juan Rivillas <jprivillaso@gmail.com>
+
+Parameters:
+  PipelineName:
+    Type: String
+    Value: MyPipeline
+
+  EmailRecipient1:
+    Type: String
+    Value: email1@mydomain.com
+
+  EmailRecipient2:
+    Type: String
+    Value: email2@mydomain.com
+
+Resources:
+  ## This is a generic Codepipeline execution state change listener
+  ## We don't need to create this pipeline at every stage, unless it is located
+  ## in a different AWS account
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "PipelineFailedEventRule"
+      EventPattern:
+        source:
+          - aws.codepipeline
+        detail-type:
+          - CodePipeline Pipeline Execution State Change
+          - CodePipeline Action Execution State Change
+          - CodePipeline Stage Execution State Change
+        detail:
+          state:
+            - FAILED
+            # If you need, you can add more states here
+          pipeline:
+            -  !Ref PipelineName
+      State: ENABLED
+      Targets:
+        -
+          Arn: !Ref FailedPipelineSNSTopic
+          Id: FailedPipelineNotificationTopic
+          InputTransformer:
+            InputTemplate: '"The Pipeline <pipeline> has failed. Go to https://console.aws.amazon.com/codepipeline/home?region=us-east-1#/view/<pipeline>" '
+            InputPathsMap:
+              pipeline: "$.detail.pipeline"
+
+  FailedPipelineSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !Ref EmailRecipient1
+          Protocol: email
+        - Endpoint: !Ref EmailRecipient2
+          Protocol: email
+
+  # This policy is needed in order to give your SNS Topic
+  # Permissions to send emails
+  FailedPipelineSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Resource: !Ref FailedPipelineSNSTopic
+            Condition: {}
+            Effect: Allow
+            Principal:
+              Service: 'events.amazonaws.com'
+            Action: 'sns:Publish'
+      Topics:
+        - !Ref FailedPipelineSNSTopic
+
+Outputs:
+  TopicName:
+    Description: Returns the ARN of the Topic created
+    Value: !Ref FailedPipelineSNSTopic
+
+  SNSTopicPolicy:
+    Description: Returns the ARN of the Topic created
+    Value: !Ref FailedPipelineSNSTopic
